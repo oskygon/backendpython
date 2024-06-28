@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administración de Productos</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid blue;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #aa0909;
+        }
+        #message {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid;
+            display: none;
+        }
+        #message.success {
+            border-color: green;
+            color: green;
+        }
+        #message.error {
+            border-color: red;
+            color: red;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgb(0,0,0);
+            background-color: rgba(0,0,0,0.4);
+            padding-top: 60px;
+        }
+        .modal-content {
+            background-color: #f5f4f2;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Administración de Productos</h1>
+    
+    <button id="newProductBtn">Nuevo Producto</button>
+    
+    <h2>Lista de Productos</h2>
+    <table id="productTable">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Precio</th>
+                <th>Stock</th>
+                <th>Imagen</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+
+    <div id="message"></div>
+
+    <!-- Modal para agregar y editar productos -->
+    <div id="productModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 id="modalTitle">Nuevo Producto</h2>
+            <form id="productForm">
+                <input type="hidden" id="productId" name="productId">
+                <label for="nombre">Nombre:</label>
+                <input type="text" id="nombre" name="nombre" required>
+                <label for="precio">Precio:</label>
+                <input type="number" id="precio" name="precio" required>
+                <label for="stock">Stock:</label>
+                <input type="number" id="stock" name="stock" required>
+                <label for="imagen">Imagen URL:</label>
+                <input type="text" id="imagen" name="imagen" required>
+                <button type="submit" id="saveProductBtn">Guardar Producto</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal para borrar productos -->
+    <div id="deleteModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Eliminar Producto</h2>
+            <p>¿Estás seguro de que deseas eliminar este producto?</p>
+            <button id="confirmDeleteBtn">Eliminar</button>
+            <button id="cancelDeleteBtn">Cancelar</button>
+        </div>
+    </div>
+
+    <script>
+      
+        function fetchProducts() {
+            fetch('/productos')
+                .then(response => response.json())
+                .then(data => {
+                    const productTableBody = document.querySelector('#productTable tbody');
+                    productTableBody.innerHTML = '';
+                    data.forEach(product => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${product.id}</td>
+                            <td>${product.nombre}</td>
+                            <td>${product.precio}</td>
+                            <td>${product.stock}</td>
+                            <td><img src="${product.imagen}" alt="${product.nombre}" width="100"></td>
+                            <td>
+                                <button onclick="openEditModal(${product.id}, '${product.nombre}', ${product.precio}, ${product.stock}, '${product.imagen}')">Modificar</button>
+                                <button onclick="openDeleteModal(${product.id})">Eliminar</button>
+                            </td>
+                        `;
+                        productTableBody.appendChild(row);
+                    });
+                });
+        }
+
+        fetchProducts();
+
+        // Modales
+        const productModal = document.getElementById('productModal');
+        const deleteModal = document.getElementById('deleteModal');
+        const newProductBtn = document.getElementById('newProductBtn');
+        const closeBtns = document.getElementsByClassName('close');
+        const saveProductBtn = document.getElementById('saveProductBtn');
+        const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+        let currentProductId;
+
+        
+        newProductBtn.onclick = function() {
+            openNewProductModal();
+        };
+
+        
+        function openNewProductModal() {
+            document.getElementById('modalTitle').textContent = 'Nuevo Producto';
+            document.getElementById('productId').value = '';
+            document.getElementById('productForm').reset();
+            productModal.style.display = 'block';
+        }
+
+        
+        function openEditModal(id, nombre, precio, stock, imagen) {
+            document.getElementById('modalTitle').textContent = 'Modificar Producto';
+            document.getElementById('productId').value = id;
+            document.getElementById('nombre').value = nombre;
+            document.getElementById('precio').value = precio;
+            document.getElementById('stock').value = stock;
+            document.getElementById('imagen').value = imagen;
+            productModal.style.display = 'block';
+        }
+
+        
+        function openDeleteModal(id) {
+            currentProductId = id;
+            deleteModal.style.display = 'block';
+        }
+
+        //cerrar
+        for (let i = 0; i < closeBtns.length; i++) {
+            closeBtns[i].onclick = function() {
+                closeModals();
+            };
+        }
+
+        function closeModals() {
+            productModal.style.display = 'none';
+            deleteModal.style.display = 'none';
+        }
+
+        window.onclick = function(event) {
+            if (event.target == productModal) {
+                productModal.style.display = 'none';
+            }
+            if (event.target == deleteModal) {
+                deleteModal.style.display = 'none';
+            }
+        }
+
+        
+        document.getElementById('productForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const id = formData.get('productId');
+            const data = {
+                nombre: formData.get('nombre'),
+                precio: formData.get('precio'),
+                stock: formData.get('stock'),
+                imagen: formData.get('imagen')
+            };
+
+            let url = '/productos';
+            let method = 'POST';
+
+            if (id) {
+                url += `/${id}`;
+                method = 'PUT';
+            }
+
+            fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(product => {
+                fetchProducts();
+                showMessage('Producto guardado exitosamente', 'success');
+                closeModals();
+            })
+            .catch(error => {
+                showMessage('Error al guardar el producto', 'error');
+            });
+        });
+
+     
+        confirmDeleteBtn.onclick = function() {
+            fetch(`/productos/${currentProductId}`, {
+                method: 'DELETE'
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                } else {
+                    throw new Error('Producto no encontrado');
+                }
+            })
+            .then(product => {
+                fetchProducts();
+                showMessage('Producto eliminado exitosamente', 'success');
+                closeModals();
+            })
+            .catch(error => {
+                showMessage('Error al eliminar el producto: ' + error.message, 'error');
+            });
+        };
+
+        document.getElementById('cancelDeleteBtn').onclick = closeModals;
+
+        function showMessage(message, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = message;
+            messageDiv.className = type;
+            messageDiv.style.display = 'block';
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
